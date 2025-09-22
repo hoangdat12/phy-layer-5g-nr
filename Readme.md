@@ -20,15 +20,14 @@ This project simulates two key steps in the **5G NR physical layer (PHY) process
 .
 ---
 
+# 1. CRC (Cyclic Redundancy Check)
 
-## 1. CRC (Cyclic Redundancy Check)
-
-### Purpose
+## Purpose
 CRC is a technique used for **error detection** during data transmission.  
 A CRC sequence is computed from the original data and appended before transmission.  
 The receiver recomputes the CRC and compares results to detect errors.
 
-### Supported CRC Types
+## Supported CRC Types
 - **CRC-24A**  
 - **CRC-24B**  
 - **CRC-24C**  
@@ -36,7 +35,7 @@ The receiver recomputes the CRC and compares results to detect errors.
 - **CRC-11**  
 - **CRC-6**
 
-### Implementation (`CRCadd.m`)
+## Implementation (`CRCadd.m`)
 
 **Function prototype:**
 ```matlab
@@ -80,8 +79,6 @@ The encoder is **systematic**, meaning:
 - The original information bits are placed at the beginning of the output codeword.
 - The calculated parity bits follow.
 
----
-
 ## Key Parameters
 
 - **`in`**: Input matrix of size `K × C`, where each column is a code block from the segmentation stage.  
@@ -95,9 +92,7 @@ The encoder is **systematic**, meaning:
   - `N = Zc × 50` for **BG2**  
 - **`out`**: Output matrix of size `N × C`, where each column is an encoded LDPC codeword.  
 
----
-
-## 🛠 Implementation: `LDPCencode.m`
+## Implementation: `LDPCencode.m`
 
 ### Inputs
 - **`in`**: `K × C` matrix of code blocks (output of **LDPCsegmentation**).  
@@ -110,8 +105,6 @@ The encoder is **systematic**, meaning:
 ### Dependencies
 - **`baseGraph.mat`** must exist in the same directory.  
 - Contains predefined **lifting value matrices** for all base graph and lifting set combinations (`BG1S1`, `BG2S3`, etc.).  
-
----
 
 ## Algorithm Steps
 
@@ -133,8 +126,6 @@ The encoder is **systematic**, meaning:
 5. **Form Final Codeword**  
    - Append parity bits to the original information bits (with fillers removed).  
    - Repeat for all `C` blocks.  
-
----
 
 ## Example
 
@@ -180,8 +171,6 @@ It involves two main operations:
 
 The process uses a **circular buffer** and is controlled by the **Redundancy Version (RV)**, which enables the transmitter to send different sets of parity bits in successive retransmissions (**HARQ**).
 
----
-
 ## Key Parameters
 
 - **`in`**: `N × C` matrix of LDPC-encoded codewords.  
@@ -195,8 +184,6 @@ The process uses a **circular buffer** and is controlled by the **Redundancy Ver
 - **`k0`**: Starting offset for circular buffer readout, derived from `rv`.  
 - **`out`**: Final output vector of length `outlen`.  
 
----
-
 ## Implementation: `LDPCrateMatching.m`
 
 ### Inputs
@@ -209,8 +196,6 @@ The process uses a **circular buffer** and is controlled by the **Redundancy Ver
 
 ### Outputs
 - **`out`**: Column vector of length `outlen` (rate-matched codeword).  
-
----
 
 ## Algorithm Steps
 
@@ -234,8 +219,6 @@ The process uses a **circular buffer** and is controlled by the **Redundancy Ver
 
 5. **Concatenation**  
    - Combine outputs from all code blocks → final vector `out`.  
-
----
 
 ## Example
 
