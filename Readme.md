@@ -66,8 +66,95 @@ output_bits = CRCadd(input_bits, '16');
 
 % output_bits = original 8 bits + 16 CRC bits
 ```
-
 ---
+
+# LDPC Segmentation (3GPP TS 38.212)
+
+## Purpose
+**LDPC segmentation** is defined in **3GPP TS 38.212** to split a large transport block into one or more smaller **code blocks** before LDPC encoding.  
+
+Segmentation is required when the **transport block size (B)** exceeds the maximum code block size (**Kcb**) allowed for the selected Base Graph.  
+When segmentation occurs, a **24-bit CRC** is attached to each segment to ensure integrity.  
+
+## Key Parameters
+
+- **`B`**: Original size of the transport block (in bits).  
+- **`Kcb`**: Maximum code block size allowed by the chosen Base Graph.  
+  - **BG1 → Kcb = 8448**  
+  - **BG2 → Kcb = 3840**  
+- **`C`**: Number of code blocks after segmentation.  
+- **`L`**: CRC length per block.  
+  - `L = 24` if segmentation is needed (`C > 1`).  
+  - `L = 0` if no segmentation (`C = 1`).  
+- **`B′`**: Total number of bits after adding CRCs:  
+  `B′ = B + C × L`  
+- **`K`**: Final uniform code block size after filler bits are added.  
+- **`F`**: Number of filler bits (value = `-1`) prepended to ensure `K × C = B′ + F`.  
+
+## Implementation: `LDPCsegmentation.m`
+
+### Inputs
+- **`in_bits`**: Row vector containing the original transport block bits (0/1).  
+- **`bg`**: Base Graph index (`1` or `2`).  
+
+### Outputs
+- **`codeBlocks`**: `K × C` matrix, where each column is a complete code block ready for LDPC encoding.  
+
+### Dependencies
+- A **`CRCadd(bits, type)`** function must be available in the MATLAB path.  
+  - Used to calculate and append the **‘24A’ CRC**.  
+
+## Algorithm Steps
+
+1. **Check Transport Block Size**  
+   - If `B ≤ Kcb`: no segmentation (`C=1, L=0`).  
+   - If `B > Kcb`: segmentation required.  
+     - Compute `C = ceil(B / (Kcb − L))`, where `L = 24`.  
+
+2. **Append CRC**  
+   - If `C > 1`:  
+     - Split `in_bits` into `C` segments.  
+     - Each segment length = `Kcb − L` bits.  
+     - Apply **CRCadd(segment, '24A')**.  
+
+3. **Calculate Final Size and Filler Bits**  
+   - `K = ceil(B′ / C)`  
+   - `F = (K × C) − B′`  
+
+4. **Prepend Filler Bits**  
+   - Add `F` filler bits (`-1`) to the front of the bit stream.  
+
+5. **Form Code Block Matrix**  
+   - Reshape into a `K × C` matrix (column-wise).  
+   - Each column = one **code block**.  
+
+## Example
+
+```matlab
+% Placeholder CRC function (for demonstration only)
+CRCadd = @(bits, type) [bits, zeros(1, 24)];
+
+% --- Parameters ---
+B = 10000; % Transport block size > Kcb for BG1
+input_bits = randi([0 1], 1, B);
+bg = 1;
+
+% --- Perform Segmentation ---
+codeBlocks = LDPCsegmentation(input_bits, bg);
+
+% --- Display Output Size ---
+fprintf('Size of the output code block matrix (K x C):\n');
+disp(size(codeBlocks));
+
+% --- Expected Result Explanation ---
+% For B=10000 and bg=1 (Kcb=8448, L=24):
+% C  = ceil(10000 / (8448 - 24)) = ceil(10000 / 8424) = 2
+% B' = 10000 + 2*24 = 10048
+% K  = ceil(10048 / 2) = 5024
+% Size(codeBlocks) = [5024, 2]
+```
+---
+
 # LDPC Encoding (3GPP TS 38.212)
 
 ## Purpose
