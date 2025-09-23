@@ -26,12 +26,6 @@ function out = LDPCencode(in, bg)
     % Replace -1 with 0
     in(fillerPos, :) = 0;
 
-    % Encode for all code block
-    persistent bgs
-    if isempty(bgs)
-        bgs = coder.load('./baseGraph.mat');
-    end
-
     % Get lifting set number
     ZcTable = {[2  4  8  16  32  64 128 256],... % Set 1
              [3  6 12  24  48  96 192 384],... % Set 2
@@ -45,48 +39,5 @@ function out = LDPCencode(in, bg)
         if any(Zc==ZcTable{ZcIdx})
             break;
         end
-    end
-
-    switch bgn
-        case 1
-            switch ZcIdx
-                case 1
-                    V = bgs.BG1S1;
-                case 2
-                    V = bgs.BG1S2;
-                case 3
-                    V = bgs.BG1S3;
-                case 4
-                    V = bgs.BG1S4;
-                case 5
-                    V = bgs.BG1S5;
-                case 6
-                    V = bgs.BG1S6;
-                case 7
-                    V = bgs.BG1S7;
-                otherwise % 8
-                    V = bgs.BG1S8;
-            end
-            Nplus2Zc = Zc*(66+2);
-        otherwise % bgn = 2
-            switch ZcIdx
-                case 1
-                    V = bgs.BG2S1;
-                case 2
-                    V = bgs.BG2S2;
-                case 3
-                    V = bgs.BG2S3;
-                case 4
-                    V = bgs.BG2S4;
-                case 5
-                    V = bgs.BG2S5;
-                case 6
-                    V = bgs.BG2S6;
-                case 7
-                    V = bgs.BG2S7;
-                otherwise % 8
-                    V = bgs.BG2S8;
-            end
-            Nplus2Zc = Zc*(50+2);
     end
 end
