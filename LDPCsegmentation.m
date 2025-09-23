@@ -81,11 +81,14 @@ function codeBlocks = LDPCsegmentation(in_bits, bg)
         BPrime = B + C*L;
     end
 
+    % Size of each code block
+    K = ceil(BPrime / C);
+
     % Add CRC for each code block
     if (C > 1) 
         bitWithCRC      = [];
         % The number of data in the segment
-        KSegment        = Kcb - L;
+        KSegment        = K - L;
         for i = 1:C
             startIdx    = (i-1)*KSegment + 1;
             endIdx      = min(i*KSegment, B); 
@@ -98,8 +101,6 @@ function codeBlocks = LDPCsegmentation(in_bits, bg)
         bitWithCRC = in_bits;
     end
     
-    % Size of each code block
-    K = ceil(BPrime / C);
     % Number of filler bits
     F = (K * C) - BPrime;
 
