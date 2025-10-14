@@ -9,7 +9,7 @@ function out = Scrambling(inBits, cinit)
     N = length(inBits);
 
     % Sinh Gold sequence
-    seq = PRBS(cinit, N);
+    seq = PresudoGenerator(cinit, N);
 
     % Scrambling = XOR giữa coded bits và Gold sequence
     out = xor(inBits(:), seq(:));

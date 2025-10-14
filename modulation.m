@@ -83,3 +83,5 @@ function out = modulation(in, type)
             out = (I_levels + 1i*Q_levels) / sqrt(170);
     end
 end
+
+%% Soft buffer size (Nref, Ncb) va puncturing
