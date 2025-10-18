@@ -1,121 +1,100 @@
-function codeBlocks = LDPCsegmentation(in_bits, bg)
-%LDPCsegmentation Segments a transport block into code blocks for 5G NR LDPC encoding.
+function cbs = LDPCsegmentation(in, bgn)
+% LDPCsegmentation - Segments a transport block for 5G NR LDPC coding.
+% It determines the number of code blocks, adds CRCs for segmentation,
+% calculates the lifting size, and adds filler bits.
 %
-%   codeBlocks = LDPCsegmentation(in_bits, bg) takes a transport block (bit stream)
-%   and a base graph index, then performs the segmentation process
-%   according to the 5G NR standard. This process includes:
-%   1. Appending a 24-bit CRC to each segment if the transport block is large enough.
-%   2. Prepending filler bits to the front to ensure all final code blocks
-%      have an equal size.
-%   3. Formatting the result into an output matrix.
+%% EXAMPLE
 %
-%   INPUTS:
-%       in_bits: A row vector containing the original data bit stream to be processed.
-%       bg:      The LDPC Base Graph to use, which must be 1 or 2.
+% --- Multi-Block Segmentation ---
 %
-%   OUTPUT:
-%       codeBlocks: A matrix of size K x C, where:
-%                   - K is the size of each code block after processing.
-%                   - C is the number of code blocks.
-%                   - **Each COLUMN** of the matrix is a complete code block.
+% Let's assume the input is a large block of 10,000 bits and we use Base Graph 1.
+%   B = 10000;      % Length of input block 'in'
+%   bgn = 1;        % Base Graph Number
 %
-%   KEY INTERNAL PARAMETERS:
-%       B:       The initial size of the input transport block (in bits).
-%       Kcb:     The maximum size (in bits) that a single code block can have,
-%                as defined by the standard for each base graph.
-%       C:       The total number of code blocks that the transport block is
-%                segmented into.
-%       L:       The length of the CRC (0 or 24) appended to each segment when C > 1.
-%       BPrime:  The total number of bits after all per-segment CRCs are added
-%                (B' in the standard, where B' = B + C*L).
-%       K:       The final, uniform size of each code block after filler bits
-%                are added (K' in the standard).
-%       F:       The number of filler bits prepended to the stream to ensure the
-%                total length is perfectly divisible by C.
+% Calling the function:
+%   cbs = LDPCsegmentation(randi([0 1], B, 1), bgn);
 %
-%   EXAMPLE:
-%       % This example assumes you have the CRCadd(bits, type) function from earlier.
+% --- Step-by-Step Calculation by the Function ---
 %
-%       % Create an input bit stream long enough to require segmentation
-%       B = 10000; % Number of bits > 8448
-%       input_data = randi([0 1], 1, B);
-%       base_graph = 1;
+% 1. **Code Blocks (C):** Since B > 8448, the block is segmented.
+%    C = ceil(10000 / (8448 - 24)) = 2 code blocks.
 %
-%       % Call the segmentation function
-%       codeBlocksMatrix = segmentLDPC(input_data, base_graph);
+% 2. **Size per Block:** The 10,000 bits are split into two segments of 5,000 bits each.
+%    A 24-bit CRC is added to each segment.
+%    Size after CRC (Kd) = ceil((10000 + 2*24) / 2) = 5024 bits per block.
 %
-%       % Display the size of the output code block matrix
-%       fprintf('Size of the output code block matrix (K x C):\n');
-%       disp(size(codeBlocksMatrix));
+% 3. **Lifting Size (Zc):** The function finds the smallest valid lifting size.
+%    For bgn=1, this results in Zc = 240.
 %
-%       % Expected Result Explanation:
-%       % For B=10000 and bg=1 (Kcb=8448), the number of code blocks C will be 2.
-%       % The final code block size K will be 5024.
-%       % Therefore, the output matrix will have a size of 5024 x 2.
-%       % The first column is the first code block, the second column is the second.
+% 4. **Filler Bits (F):** The total block size K becomes 22 * Zc = 5280.
+%    The number of filler bits is F = K - Kd = 5280 - 5024 = 256.
+%
+% --- Expected Output 'cbs' ---
+%
+% The output 'cbs' will be a matrix of size 5280x2.
+%
+% cbs = [ 5000 data bits (Col 1)  |  5000 data bits (Col 2)  ]
+%       [   24 CRC bits (Col 1)   |    24 CRC bits (Col 2)   ]
+%       [ 256 filler bits (-1)    |  256 filler bits (-1)    ]
+%
+%       Total Rows: 5000 (data) + 24 (CRC) + 256 (filler) = 5280 rows.
+%       Total Columns: 2 (because C=2).
 
+    B = length(in);
 
-    % The number of input bit
-    B = length(in_bits);
-
-    % Determine Kcb and Kb based on the base graph
-    if bg == 1
-        Kcb = 8448;
-    elseif bg == 2
-        Kcb = 3840;
-    else
-        error("Invalid base graph (bg). Must be 1 or 2.");
-    end
-
-    % Determine segmentation parameters C and L
-    % BPrime is a new length of 
-    if (B <= Kcb)
-        % No segmentation needed
-        L = 0;
-        C = 1;
-        BPrime = B;
-    else
-        % Segmentation is required
-        L = 24;
-        C = ceil(B / (Kcb - L));
-        BPrime = B + C*L;
-    end
-
-    % Size of each code block
-    K = ceil(BPrime / C);
-
-    % Add CRC for each code block
-    if (C > 1) 
-        bitWithCRC      = [];
-        % The number of data in the segment
-        KSegment        = K - L;
-        for i = 1:C
-            startIdx    = (i-1)*KSegment + 1;
-            endIdx      = min(i*KSegment, B); 
-
-            segment     = in_bits(startIdx:endIdx);
-            segmentCRC  = CRCadd(segment, '24A');
-            bitWithCRC  = [bitWithCRC, segmentCRC];
+    % --- Basic setup based on TS 38.212 Section 5.2.2 ---
+    if bgn == 1
+        Kcb = 8448; % Maximum code block size for BG1
+        Kb = 22;
+    else % bgn == 2
+        Kcb = 3840; % Maximum code block size for BG2
+        if B > 640, Kb = 10;
+        elseif B > 560, Kb = 9;
+        elseif B > 192, Kb = 8;
+        else, Kb = 6;
         end
+    end
+
+    % --- Determine number of code blocks (C) ---
+    if B <= Kcb
+        % No segmentation needed
+        L = 0; C = 1; Bd = B;
     else
-        bitWithCRC = in_bits;
+        % Segmentation required
+        L = 24; % CRC length for segmentation
+        C = ceil(B / (Kcb - L));
+        Bd = B + C * L; % Total bits after adding all CRCs
     end
+
+    cbz = ceil(B / C);  % Bits per block before CRC attachment
+    Kd  = ceil(Bd / C); % Bits per block after CRC attachment
+
+    % --- Choose lifting size (Zc) ---
+    % Find smallest Zc from the standard list such that the code can contain Kd bits.
+    Zlist = [2:16 18:2:32 36:4:64 72:8:128 144:16:256 288:32:384];
+    Zc = min(Zlist(Kb * Zlist >= Kd));
     
-    % Number of filler bits
-    F = (K * C) - BPrime;
-
-    % Filler -1 into bitWithCRC
-    paddeBits = [-1*ones(1, F), bitWithCRC];
-
-    % Create matrix output 
-    % [code     code    code
-    %  block    block   block]
-    codeBlocks = zeros(K, C);
-    for r = 1:C
-        startIdx            = (r - 1)*K + 1;
-        endIdx              = r*K;
-
-        % Copy into codeBlocks
-        codeBlocks(:, r)    = paddeBits(startIdx:endIdx)';
+    % --- Calculate filler bits (F) ---
+    if bgn == 1
+        K = 22 * Zc; % Information bits per code block for BG1
+    else % bgn == 2
+        K = 10 * Zc; % Information bits per code block for BG2
     end
+    F = K - Kd;  % Number of filler bits to add
+
+    % --- Segmentation and CRC attachment ---
+    if C == 1
+        % If only one block, no internal CRC is added here
+        cbCRC = in;
+    else
+        % Pad with zeros to make divisible by C, then reshape
+        pad = [in; zeros(cbz * C - B, 1)];
+        cb = reshape(pad, cbz, C);
+        % Add 24-bit CRC to each code block column
+        cbCRC = nrCRCEncode(cb, '24B'); % Assumes existence of a CRC function
+    end
+
+    % --- Add filler bits (-1) ---
+    % Append F filler bits (represented by -1) to each column.
+    cbs = [cbCRC; -1 * ones(F, C)];
 end

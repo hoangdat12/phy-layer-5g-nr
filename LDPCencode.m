@@ -19,6 +19,8 @@ function out = LDPCencode(in, bg)
 
     % Tính lifting factor Zc
     Zc = K / numCol;
+    
+    disp(Zc);
 
     % Danh sách giá trị Zc hợp lệ theo tiêu chuẩn 3GPP
     ZcVec = [2:16 18:2:32 36:4:64 72:8:128 144:16:256 288:32:384];

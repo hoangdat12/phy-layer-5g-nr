@@ -1,51 +1,51 @@
 function out = LDPCrateMatching(in, outlen, rv, modulation, nlayers, varargin)
 %LDPCrateMatching Perform 5G NR LDPC rate matching.
-%   OUT = LDPCrateMatching(IN, OUTLEN, RV, MODULATION, NLAYERS) performs
-%   rate matching on the LDPC-encoded input bits IN to produce an output
-%   bit vector OUT of length OUTLEN, according to 3GPP TS 38.212 Section
-%   5.4.2.
 %
-%   OUT = LDPCrateMatching(IN, OUTLEN, RV, MODULATION, NLAYERS, NREF)
-%   performs rate matching with a limited soft buffer size NREF.
+% This function performs two main operations:
+% 1. It distributes the total target output length 'outlen' among the
+%    multiple input code blocks (the columns of 'in'). Since the total
+%    length might not be perfectly divisible, some blocks get a slightly
+%    larger target size (E_ceil) and some get a smaller one (E_floor).
+% 2. For EACH code block, it performs rate matching using a circular buffer
+%    to select bits, followed by bit interleaving to produce the target
+%    number of bits for that block.
 %
-%   Inputs:
-%       IN          - Matrix of input bits after LDPC encoding. Each column
-%                     represents a separate code block from a single
-%                     transport block. The values are typically 0s and 1s.
-%       OUTLEN      - Desired number of output bits (E). This is a scalar
-%                     integer.
-%       RV          - Redundancy Version, specified as 0, 1, 2, or 3.
-%       MODULATION  - Modulation scheme, specified as a character vector or
-%                     string, e.g., 'QPSK', '16QAM', '64QAM', '256QAM'.
-%       NLAYERS     - Number of transmission layers (scalar integer, >= 1).
-%       NREF        - (Optional) Limited soft buffer size for rate matching.
-%                     If not provided, the full buffer size (N) is used.
+% The final output is the concatenation of all processed blocks.
 %
-%   Output:
-%       OUT         - Column vector of output bits after rate matching and
-%                     concatenation. The length of this vector is OUTLEN.
+% ## VISUALIZATION OF THE ENTIRE PROCESS ##
 %
-%   Usage Example:
-%       % --- Parameters ---
-%       E = 9000;         % Target output length
-%       rv = 0;           % Redundancy version
-%       modScheme = '64QAM';
-%       numLayers = 2;
+% Input ('in' with C code blocks)
+%  Block 1       Block 2         Block C
+% /-------\     /-------\       /-------\
+% | bits  |     | bits  |  ...  | bits  |
+% \-------/     \-------/       \-------/
+%     |             |               |
+%     |             |               |
+%     V             V               V
 %
-%       % --- LDPC Encoding (Simplified for example) ---
-%       % In a real scenario, this would come from an actual LDPC encoder
-%       % that produces a codeword of a valid length (e.g., 66*Zc or 50*Zc).
-%       N = 8448;         % Example codeword length (BG1, Zc=128)
-%       ldpcEncodedBits = randi([0 1], N, 1); % One code block
+% Step 1: Each block is processed individually by 'cbsRateMatch'
+%         to a target length of E_floor or E_ceil.
 %
-%       % --- Perform Rate Matching ---
-%       rateMatchedBits = LDPCrateMatching(ldpcEncodedBits, E, rv, ...
-%                                          modScheme, numLayers);
+%  (Inside cbsRateMatch for ONE block)
+%  1. Select bits using circular buffer --> [ Intermediate Bits ]
+%  2. Interleave bits (reshape/transpose) --> [ Processed Block ]
 %
-%       % --- Display Results ---
-%       disp(['Length of rate-matched output: ', num2str(length(rateMatchedBits))]);
-%       % disp('First 10 bits of the output:');
-%       % disp(rateMatchedBits(1:10)');
+% Processed Block 1   Processed Block 2     Processed Block C
+%  (Length E_floor)    (Length E_ceil)       (Length E_ceil)
+% /---------------\   /---------------\     /---------------\
+% | processed_bits|   | processed_bits| ... | processed_bits|
+% \---------------/   \---------------/     \---------------/
+%         |                 |                     |
+%         |                 |                     |
+%         V                 V                     V
+%
+% Step 2: Concatenate all processed blocks into a single output stream.
+%
+% Final Output ('out' with length 'outlen')
+% /-------------------------------------------------\
+% | Block 1 Bits | Block 2 Bits | ... | Block C Bits |
+% \-------------------------------------------------/
+%
 
     % Validate Input
     narginchk(5,6);

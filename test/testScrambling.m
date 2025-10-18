@@ -5,7 +5,7 @@ inBits = randi([0 1], 100, 1);
 cinit = 39827;  % ví dụ (giá trị seed)
 
 % Kết quả từ hàm tự viết
-out_custom = scrambling(inBits, cinit);
+out_custom = Scrambling(inBits, cinit);
 
 disp('Kết quả scrambling (10 bit đầu):');
 disp(out_custom(1:10).');

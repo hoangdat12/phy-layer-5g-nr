@@ -1,9 +1,43 @@
-function out = modulation(in, type)
+function out = Modulation(in, type)
 % modulation  Map scrambled bits -> modulation symbols (3GPP TS 38.211)
 %
-%   in   : column vector of bits (0/1)
-%   type : 'PI/2-BPSK','BPSK','QPSK','16QAM','64QAM','256QAM'
-%   out  : column vector of modulation symbols (complex)
+% This function converts a stream of bits into a stream of complex-valued
+% modulation symbols. It works in two stages:
+% 1. Grouping: The input bitstream is chunked into groups of Qm bits,
+%    where Qm depends on the modulation type (e.g., Qm=4 for 16QAM).
+% 2. Mapping: Each group of bits is mapped to a specific point on the
+%    complex plane (the constellation diagram).
+%
+% ## VISUALIZATION OF THE PROCESS (Example: 16QAM) ##
+%
+% 1. Input bit stream is grouped into chunks of 4 bits (Qm=4).
+%
+%    Input 'in': [1,0,1,1, 0,1,1,0, ...]
+%                   |
+%                   V
+%    Group 1: [1,0,1,1]  ---> maps to Symbol 1
+%    Group 2: [0,1,1,0]  ---> maps to Symbol 2
+%    ...
+%
+% 2. Each group is used as a coordinate to find a point on the constellation.
+%
+%    For Group 1 = [1,0,1,1]:
+%      - First 2 bits [1,0] map to +3 on the I-axis (Real part).
+%      - Next 2 bits [1,1] map to +1 on the Q-axis (Imaginary part).
+%
+%                                     Q (Imaginary)
+%                                      ^
+%                                      |
+%                                   3 o| o o o
+%                                      |
+%                                   1 o| o o X  <-- Symbol 1 (+3 + 1i)
+%         <----------------------------+---------------------------> I (Real)
+%                                 -1 o | o o o
+%                                      |
+%                                 -3 o | o o o
+%                                      |
+% The final output 'out' is a column vector of these complex values
+% (e.g., [(+3+1i)/sqrt(10), ...]).
 
     % Ensure input is a column vector
     in = in(:);

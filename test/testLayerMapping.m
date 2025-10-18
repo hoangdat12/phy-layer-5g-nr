@@ -7,7 +7,7 @@ in = (1:24).';        % Codeword đầu vào (vector cột)
 nlayers = 4;          % Số lượng layer
 
 % --- Hàm tự viết ---
-out_custom = layerMapping(in, nlayers);
+out_custom = LayerMapping(in, nlayers);
 
 % --- Hàm chuẩn 5G NR ---
 out_nr = nrLayerMap(in, nlayers);
